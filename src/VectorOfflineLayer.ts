@@ -20,7 +20,7 @@ import {
   PreparedTile,
   sourcesToViews,
 } from "protomaps-leaflet";
-import { reflect, timer } from "./utils";
+import { getTileImageSource, reflect, timer } from "./utils";
 import {
   getTilePoints,
   getTileUrl,
@@ -273,8 +273,8 @@ export class VectorOfflineLayer extends L.TileLayer {
     }
   }
 
-  public createTile(coords: Coords, done: DoneCallback) {
-    const tile = L.DomUtil.create("div", "leaflet-tile");
+  public createTile(coords: Coords, done: DoneCallback): HTMLCanvasElement {
+    const tile = L.DomUtil.create("canvas", "leaflet-tile");
 
     L.DomEvent.on(
       tile,
@@ -293,6 +293,22 @@ export class VectorOfflineLayer extends L.TileLayer {
     }
 
     tile.lang = this.isLoading;
+    tile.alt = '';
+    tile.setAttribute('role', 'presentation');
+
+    const storageKey: string = this._getStorageKey(coords);
+    const onlineKey: string = this._tileCoordsToKey(coords);
+
+    // This method takes the tile key and the online url of the tile and returns
+    // the url of the tile image source from the cache if it exists, otherwise
+    // it fetches it from the online url. This url is then set as the src of the
+    // tile element. i.e., <img src={url} />. But as we are using canvas instead
+    // of img, we cannot use this.
+    // TODO: Find a way to use this method with canvas.
+    getTileImageSource(
+      this._getStorageKey(coords),
+      this.getTileUrl(coords),
+    ).then((src) => (tile.src = src));
 
     return tile;
     //   const element = L.DomUtil.create("canvas", "leaflet-tile");
@@ -308,7 +324,7 @@ export class VectorOfflineLayer extends L.TileLayer {
     //   return element;
   }
 
-  private _getStorageKey(coords: { x: number; y: number; z: number }) {
+  private _getStorageKey(coords: Coords) {
     return getTileUrl(this._url, {
       ...coords,
       ...this.options,
