@@ -4,13 +4,10 @@ declare const L: any;
 import {
   Bounds,
   Coords,
-  DomUtil,
   DoneCallback,
-  Point,
-  TileLayer,
 } from "leaflet";
 import { KeyedHtmlCanvasElement, LeafletLayerOptions } from "./types";
-import themes from "protomaps-leaflet/dist/default_style/themes";
+import { themes } from "protomaps-leaflet/src/default_style/themes";
 import {
   Labelers,
   labelRules,
@@ -27,7 +24,7 @@ import {
   TileInfo,
 } from "leaflet.offline/dist/types/src/TileManager";
 
-export class VectorOfflineLayer extends L.TileLayer {
+export class VectorOfflineLayer extends L.GridLayer {
   _url!: string;
 
   constructor(options: LeafletLayerOptions = {}) {
@@ -40,6 +37,8 @@ export class VectorOfflineLayer extends L.TileLayer {
       options.attribution =
         '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>';
     super(options);
+
+    this._options = options;
 
     if (options.theme) {
       const theme = themes[options.theme];
@@ -76,12 +75,117 @@ export class VectorOfflineLayer extends L.TileLayer {
     this.lang = options.lang;
   }
 
+  public clearLayout() {
+    this.labelers = new Labelers(
+      this.scratch,
+      this.labelRules,
+      16,
+      this.onTilesInvalidated
+    );
+  }
+
+  public createTile(coords: Coords, done: DoneCallback): HTMLCanvasElement {
+    const tile = L.DomUtil.create("canvas", "leaflet-tile");
+
+    L.DomEvent.on(
+      tile,
+      "load",
+      L.Util.bind(this._tileOnLoad, this, done, tile)
+    );
+    L.DomEvent.on(
+      tile,
+      "error",
+      L.Util.bind(this._tileOnError, this, done, tile)
+    );
+
+    if (this.options.crossOrigin || this.options.crossOrigin === "") {
+      tile.crossOrigin =
+        this.options.crossOrigin === true ? "" : this.options.crossOrigin;
+    }
+
+    tile.lang = this.isLoading;
+    tile.alt = '';
+    tile.setAttribute('role', 'presentation');
+
+    const storageKey: string = this._getStorageKey(coords);
+    const onlineKey: string = this._tileCoordsToKey(coords);
+
+    // This method takes the tile key and the online url of the tile and returns
+    // the url of the tile image source from the cache if it exists, otherwise
+    // it fetches it from the online url. This url is then set as the src of the
+    // tile element. i.e., <img src={url} />. But as we are using canvas instead
+    // of img, we cannot use this.
+    // TODO: Find a way to use this method with canvas.
+    getTileImageSource(
+      this._getStorageKey(coords),
+      this.getTileUrl(coords),
+    ).then((value: [string, boolean]) => {
+      const [url, fromOnline]: [string, boolean] = value;
+      let key: string;
+      if (fromOnline) {
+        key = onlineKey;
+      } else {
+        key = storageKey;
+      }
+      this.renderTile(coords, tile, key, url, () => {
+        done(undefined, tile);
+      });
+    });
+
+    return tile;
+    //   const element = L.DomUtil.create("canvas", "leaflet-tile");
+    //   element.lang = this.lang;
+
+    //   const key = this._tileCoordsToKey(coords);
+    //   element.key = key;
+
+    //   this.renderTile(coords, element, key, () => {
+    //     showTile(undefined, element);
+    //   });
+
+    //   return element;
+  }
+
+  public getTileUrls(bounds: Bounds, zoom: number): TileInfo[] {
+    const tiles: TileInfo[] = [];
+    const tilePoints = getTilePoints(bounds, this.getTileSize());
+    for (let index = 0; index < tilePoints.length; index += 1) {
+      const tilePoint = tilePoints[index];
+      const data = {
+        ...this.options,
+        x: tilePoint.x,
+        y: tilePoint.y,
+        z: zoom + (this.options.zoomOffset || 0),
+      };
+      tiles.push({
+        key: getTileUrl(this._url, {
+          ...data,
+          s: this.options.subdomains?.[0],
+        }),
+        url: getTileUrl(this._url, {
+          ...data,
+          // @ts-ignore: Undefined
+          s: this._getSubdomain(tilePoint),
+        }),
+        z: zoom,
+        x: tilePoint.x,
+        y: tilePoint.y,
+        urlTemplate: this._url,
+        createdAt: Date.now(),
+      });
+    }
+    return tiles;
+  }
+
   public async renderTile(
     coords: Coords,
     element: KeyedHtmlCanvasElement,
     key: string,
-    done = () => {}
+    url: string,
+    done = () => { }
   ) {
+    this.views = sourcesToViews({ ...this._options, url });
+
     this.lastRequestedZ = coords.z;
 
     const promises = [];
@@ -150,7 +254,7 @@ export class VectorOfflineLayer extends L.TileLayer {
       maxX: 256 * (coords.x + 1) + buf,
       maxY: 256 * (coords.y + 1) + buf,
     };
-    const origin = new Point(256 * coords.x, 256 * coords.y);
+    const origin = new L.Point(256 * coords.x, 256 * coords.y);
 
     element.width = this.tileSize;
     element.height = this.tileSize;
@@ -227,11 +331,19 @@ export class VectorOfflineLayer extends L.TileLayer {
     done();
   }
 
+  public rerenderTiles() {
+    for (const unwrappedK in this._tiles) {
+      const wrappedCoord = this._wrapCoords(this._keyToTileCoords(unwrappedK));
+      const key = this._tileCoordsToKey(wrappedCoord);
+      this.renderTile(wrappedCoord, this._tiles[unwrappedK].el, key, this._url);
+    }
+  }
+
   public rerenderTile(key: string) {
     for (const unwrappedK in this._tiles) {
       const wrappedCoord = this._wrapCoords(this._keyToTileCoords(unwrappedK));
       if (key === this._tileCoordsToKey(wrappedCoord)) {
-        this.renderTile(wrappedCoord, this._tiles[unwrappedK].el, key);
+        this.renderTile(wrappedCoord, this._tiles[unwrappedK].el, key, this._url);
       }
     }
   }
@@ -256,114 +368,6 @@ export class VectorOfflineLayer extends L.TileLayer {
     return featuresBySourceName;
   }
 
-  public clearLayout() {
-    this.labelers = new Labelers(
-      this.scratch,
-      this.labelRules,
-      16,
-      this.onTilesInvalidated
-    );
-  }
-
-  public rerenderTiles() {
-    for (const unwrappedK in this._tiles) {
-      const wrappedCoord = this._wrapCoords(this._keyToTileCoords(unwrappedK));
-      const key = this._tileCoordsToKey(wrappedCoord);
-      this.renderTile(wrappedCoord, this._tiles[unwrappedK].el, key);
-    }
-  }
-
-  public createTile(coords: Coords, done: DoneCallback): HTMLCanvasElement {
-    const tile = L.DomUtil.create("canvas", "leaflet-tile");
-
-    L.DomEvent.on(
-      tile,
-      "load",
-      L.Util.bind(this._tileOnLoad, this, done, tile)
-    );
-    L.DomEvent.on(
-      tile,
-      "error",
-      L.Util.bind(this._tileOnError, this, done, tile)
-    );
-
-    if (this.options.crossOrigin || this.options.crossOrigin === "") {
-      tile.crossOrigin =
-        this.options.crossOrigin === true ? "" : this.options.crossOrigin;
-    }
-
-    tile.lang = this.isLoading;
-    tile.alt = '';
-    tile.setAttribute('role', 'presentation');
-
-    const storageKey: string = this._getStorageKey(coords);
-    const onlineKey: string = this._tileCoordsToKey(coords);
-
-    // This method takes the tile key and the online url of the tile and returns
-    // the url of the tile image source from the cache if it exists, otherwise
-    // it fetches it from the online url. This url is then set as the src of the
-    // tile element. i.e., <img src={url} />. But as we are using canvas instead
-    // of img, we cannot use this.
-    // TODO: Find a way to use this method with canvas.
-    getTileImageSource(
-      this._getStorageKey(coords),
-      this.getTileUrl(coords),
-    ).then((src) => (tile.src = src));
-
-    return tile;
-    //   const element = L.DomUtil.create("canvas", "leaflet-tile");
-    //   element.lang = this.lang;
-
-    //   const key = this._tileCoordsToKey(coords);
-    //   element.key = key;
-
-    //   this.renderTile(coords, element, key, () => {
-    //     showTile(undefined, element);
-    //   });
-
-    //   return element;
-  }
-
-  private _getStorageKey(coords: Coords) {
-    return getTileUrl(this._url, {
-      ...coords,
-      ...this.options,
-      // @ts-ignore: Possibly undefined
-      s: this.options.subdomains["0"],
-    });
-  }
-
-  public getTileUrls(bounds: Bounds, zoom: number): TileInfo[] {
-    const tiles: TileInfo[] = [];
-    const tilePoints = getTilePoints(bounds, this.getTileSize());
-    for (let index = 0; index < tilePoints.length; index += 1) {
-      const tilePoint = tilePoints[index];
-      const data = {
-        ...this.options,
-        x: tilePoint.x,
-        y: tilePoint.y,
-        z: zoom + (this.options.zoomOffset || 0),
-      };
-      tiles.push({
-        key: getTileUrl(this._url, {
-          ...data,
-          s: this.options.subdomains?.[0],
-        }),
-        url: getTileUrl(this._url, {
-          ...data,
-          // @ts-ignore: Undefined
-          s: this._getSubdomain(tilePoint),
-        }),
-        z: zoom,
-        x: tilePoint.x,
-        y: tilePoint.y,
-        urlTemplate: this._url,
-        createdAt: Date.now(),
-      });
-    }
-    return tiles;
-  }
-
   public _removeTile(key: string) {
     const tile = this._tiles[key];
     if (!tile) {
@@ -378,6 +382,15 @@ export class VectorOfflineLayer extends L.TileLayer {
     this.fire("tileunload", {
       tile: tile.el,
       coords: this._keyToTileCoords(key),
+    });
+  }
+
+  private _getStorageKey(coords: Coords) {
+    return getTileUrl(this._url, {
+      ...coords,
+      ...this.options,
+      // @ts-ignore: Possibly undefined
+      s: this.options.subdomains["0"],
     });
   }
 }

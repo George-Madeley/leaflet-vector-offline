@@ -1,3 +1,4 @@
+import { GridLayerOptions, LatLngBoundsExpression } from "leaflet";
 import { PMTiles } from "pmtiles";
 import { LabelRule, PaintRule, SourceOptions } from "protomaps-leaflet";
 
@@ -11,8 +12,8 @@ export type DoneCallback = (error?: Error, tile?: HTMLElement) => void;
 
 export type KeyedHtmlCanvasElement = HTMLCanvasElement & { key: string };
 
-export interface LeafletLayerOptions {
-  bounds?: number[][];
+export interface LeafletLayerOptions extends GridLayerOptions {
+  bounds?: LatLngBoundsExpression;
   attribution?: string;
   debug?: string;
   lang?: string;
