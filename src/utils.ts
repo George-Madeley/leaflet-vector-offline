@@ -31,13 +31,15 @@ export const timer = (duration: number) => {
  *
  * @param key The key of the tile
  * @param url The online url of the tile
- * @returns The url of the tile image source.
+ * @returns The url of the tile image source and boolean where if ```true```,
+ * means the tile was fetched from the URL. If ```false```, tile was fetched
+ * from cache.
  */
-export async function getTileImageSource(key: string, url: string) {
-  const shouldUseUrl = !(await hasTile(key));
+export async function getTileImageSource(key: string, url: string): Promise<[string, boolean]> {
+  const shouldUseUrl: boolean = !(await hasTile(key));
   if (shouldUseUrl) {
-    return url;
+    return [url, shouldUseUrl];
   }
   const blob = await getBlobByKey(key);
-  return URL.createObjectURL(blob);
+  return [URL.createObjectURL(blob), shouldUseUrl];
 }
