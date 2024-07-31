@@ -2,14 +2,15 @@
   "name": "leaflet-vector-offline",
   "version": "1.0.0",
   "description": "Plugin for Leaflet.js that supports offline vector map tiles.",
-  "main": "src/index.ts",
+  "main": "index.js",
   "scripts": {
     "lint": "npx eslint src test",
     "lint:fix": "npm run lint -- --fix",
     "prettier": "npx prettier src test --check",
     "prettier:fix": "npm run prettier -- --write",
     "format": "npm run prettier:fix && npm run lint:fix",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm tsc"
   },
   "author": "George Madeley",
   "license": "ISC",
