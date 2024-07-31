@@ -1,6 +1,6 @@
 {
   "name": "leaflet-vector-offline",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Plugin for Leaflet.js that supports offline vector map tiles.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
