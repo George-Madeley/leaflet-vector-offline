@@ -1,6 +1,9 @@
 {
   "author": "George Madeley",
   "bin": "lib/index.js",
+  "bugs": {
+    "url": "https://github.com/George-Madeley/leaflet-vector-offline/issues"
+  },
   "dependencies": {
     "leaflet": "^1.9.4",
     "leaflet.offline": "^3.1.0",
@@ -12,7 +15,10 @@
     "@eslint/js": "^9.8.0",
     "@types/node": "^22.0.0",
     "eslint": "^9.8.0",
+    "eslint-config-prettier": "^9.1.0",
     "globals": "^15.8.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^15.2.7",
     "prettier": "3.3.3",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.0.0"
@@ -21,17 +27,35 @@
     "lib",
     "package.json"
   ],
+  "homepage": "https://github.com/George-Madeley/leaflet-vector-offline#readme",
+  "keywords": [
+    "leaflet",
+    "offline",
+    "vector"
+  ],
   "license": "ISC",
+  "lint-staged": {
+    "src/**/*.{js, ts}": [
+      "eslint --quiet --fix"
+    ],
+    "src/**/*.{json,js,ts}": [
+      "prettier --write --ignore-unknown"
+    ]
+  },
   "main": "lib/index.js",
   "module": "lib/index.js",
   "name": "leaflet-vector-offline",
-  "repository": "https://github.com/George-Madeley/leaflet-vector-offline.git",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/George-Madeley/leaflet-vector-offline.git"
+  },
   "scripts": {
     "build": "rm -rf lib && npx tsc",
     "format": "eslint --fix src && prettier -w \"./src/**/*.ts\"",
     "lint": "eslint src && prettier --check \"./src/**/*.ts\"",
     "lint:fix": "eslint --fix src tes",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
   },
   "types": "lib/index.d.ts",
   "version": "1.0.8"
