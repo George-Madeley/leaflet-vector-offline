@@ -12,7 +12,7 @@ import * as protomapsLeaflet from "protomaps-leaflet";
 export class VectorOfflineLayer extends L.TileLayer {
   _url!: string;
 
-  constructor(options: VectorLayerOptions = {}) {
+  constructor(url: string, options: VectorLayerOptions = {}) {
     if (options.noWrap && !options.bounds)
       options.bounds = [
         [-90, -180],
@@ -21,7 +21,7 @@ export class VectorOfflineLayer extends L.TileLayer {
     if (options.attribution == null)
       options.attribution =
         '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>';
-    super(options);
+    super(url, options);
 
     this._options = options;
 
@@ -370,8 +370,8 @@ export class VectorOfflineLayer extends L.TileLayer {
   }
 }
 
-export function vectorOfflineLayer(options: VectorLayerOptions) {
-  return new VectorOfflineLayer(options);
+export function vectorOfflineLayer(url: string, options: VectorLayerOptions) {
+  return new VectorOfflineLayer(url, options);
 }
 
 /**  @ts-ignore */
