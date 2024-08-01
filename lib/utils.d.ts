@@ -15,8 +15,7 @@ export declare const timer: (duration: number) => Promise<void>;
  *
  * @param key The key of the tile
  * @param url The online url of the tile
- * @returns The url of the tile image source and boolean where if ```true```,
- * means the tile was fetched from the URL. If ```false```, tile was fetched
- * from cache.
+ * @returns The url of the tile image source and boolean where if `true`, means
+ * the tile was fetched from the URL. If `false`, tile was fetched from cache.
  */
-export declare function getTileImageSource(key: string, url: string): Promise<[string, boolean]>;
+export declare const getTileImageSource: (key: string, url: string) => Promise<[string, boolean]>;

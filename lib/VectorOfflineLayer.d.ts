@@ -2,7 +2,7 @@ declare const L: any;
 import { Bounds, Coords, DoneCallback } from "leaflet";
 import { KeyedHtmlCanvasElement, LeafletLayerOptions } from "./types";
 import { PickedFeature } from "protomaps-leaflet";
-import { TileInfo } from "leaflet.offline/dist/types/src/TileManager";
+import { TileInfo } from "leaflet.offline";
 export declare class VectorOfflineLayer extends L.GridLayer {
     _url: string;
     constructor(options?: LeafletLayerOptions);

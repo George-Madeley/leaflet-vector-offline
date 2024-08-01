@@ -1,11 +1,11 @@
 import { GridLayerOptions, LatLngBoundsExpression } from "leaflet";
 import { PMTiles } from "pmtiles";
 import { LabelRule, PaintRule, SourceOptions } from "protomaps-leaflet";
-export type Status = {
+export interface Status {
     status: string;
     value?: unknown;
     reason: Error;
-};
+}
 export type DoneCallback = (error?: Error, tile?: HTMLElement) => void;
 export type KeyedHtmlCanvasElement = HTMLCanvasElement & {
     key: string;
