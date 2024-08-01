@@ -72,25 +72,7 @@ export class VectorOfflineLayer extends L.GridLayer {
   public createTile(coords: Coords, done: DoneCallback): HTMLCanvasElement {
     const tile = L.DomUtil.create("canvas", "leaflet-tile");
 
-    L.DomEvent.on(
-      tile,
-      "load",
-      L.Util.bind(this._tileOnLoad, this, done, tile)
-    );
-    L.DomEvent.on(
-      tile,
-      "error",
-      L.Util.bind(this._tileOnError, this, done, tile)
-    );
-
-    if (this.options.crossOrigin || this.options.crossOrigin === "") {
-      tile.crossOrigin =
-        this.options.crossOrigin === true ? "" : this.options.crossOrigin;
-    }
-
     tile.lang = this.isLoading;
-    tile.alt = "";
-    tile.setAttribute("role", "presentation");
 
     const storageKey: string = this._getStorageKey(coords);
     const onlineKey: string = this._tileCoordsToKey(coords);
@@ -112,6 +94,7 @@ export class VectorOfflineLayer extends L.GridLayer {
       } else {
         key = storageKey;
       }
+      tile.key = key;
       this.renderTile(coords, tile, key, url, () => {
         done(undefined, tile);
       });
