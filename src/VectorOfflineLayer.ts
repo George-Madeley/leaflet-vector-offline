@@ -1,7 +1,7 @@
 // biome-ignore lint: leaflet 1.x
 declare const L: any;
 
-import { KeyedHtmlCanvasElement, LeafletLayerOptions } from "./types";
+import { KeyedHtmlCanvasElement, VectorLayerOptions } from "./types";
 import { getTileImageSource, reflect, timer } from "./utils";
 import { themes } from "./themes";
 
@@ -9,10 +9,10 @@ import { Bounds, Coords, DoneCallback, Point } from "leaflet";
 import { getTilePoints, getTileUrl, TileInfo } from "leaflet.offline";
 import * as protomapsLeaflet from "protomaps-leaflet";
 
-export class VectorOfflineLayer extends L.GridLayer {
+export class VectorOfflineLayer extends L.TileLayer {
   _url!: string;
 
-  constructor(options: LeafletLayerOptions = {}) {
+  constructor(options: VectorLayerOptions = {}) {
     if (options.noWrap && !options.bounds)
       options.bounds = [
         [-90, -180],
@@ -370,7 +370,7 @@ export class VectorOfflineLayer extends L.GridLayer {
   }
 }
 
-export function vectorOfflineLayer(options: LeafletLayerOptions) {
+export function vectorOfflineLayer(options: VectorLayerOptions) {
   return new VectorOfflineLayer(options);
 }
 

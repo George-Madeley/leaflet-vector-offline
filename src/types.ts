@@ -1,5 +1,5 @@
 import { PMTiles } from "pmtiles";
-import { GridLayerOptions, LatLngBoundsExpression } from "leaflet";
+import { LatLngBoundsExpression, TileLayerOptions } from "leaflet";
 import * as protomapsLeaflet from "protomaps-leaflet";
 
 export interface Status {
@@ -12,7 +12,7 @@ export type DoneCallback = (error?: Error, tile?: HTMLElement) => void;
 
 export type KeyedHtmlCanvasElement = HTMLCanvasElement & { key: string };
 
-export interface LeafletLayerOptions extends GridLayerOptions {
+export interface VectorLayerOptions extends TileLayerOptions {
   bounds?: LatLngBoundsExpression;
   attribution?: string;
   debug?: string;

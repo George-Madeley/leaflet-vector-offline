@@ -3,5 +3,5 @@ export type {
   Status,
   DoneCallback,
   KeyedHtmlCanvasElement,
-  LeafletLayerOptions,
+  VectorLayerOptions,
 } from "./types";
