@@ -1,31 +1,33 @@
 {
-  "name": "leaflet-vector-offline",
-  "version": "1.0.5",
-  "description": "Plugin for Leaflet.js that supports offline vector map tiles.",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "scripts": {
-    "lint": "npx eslint src test",
-    "lint:fix": "npm run lint -- --fix",
-    "prettier": "npx prettier src test --check",
-    "prettier:fix": "npm run prettier -- --write",
-    "format": "npm run prettier:fix && npm run lint:fix",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc"
-  },
   "author": "George Madeley",
-  "license": "ISC",
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "globals": "^15.8.0",
-    "prettier": "3.3.3",
-    "typescript": "^5.5.4"
-  },
   "dependencies": {
     "leaflet": "^1.9.4",
-    "leaflet.offline": "^3.0.1",
+    "leaflet.offline": "^3.1.0",
     "pmtiles": "^3.0.6",
     "protomaps-leaflet": "^4.0.0"
   },
-  "repository": "https://github.com/George-Madeley/leaflet-vector-offline.git"
+  "description": "Plugin for Leaflet.js that supports offline vector map tiles.",
+  "devDependencies": {
+    "@eslint/js": "^9.8.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.8.0",
+    "globals": "^15.8.0",
+    "prettier": "3.3.3",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.0.0"
+  },
+  "license": "ISC",
+  "main": "lib/index.js",
+  "name": "leaflet-vector-offline",
+  "repository": "https://github.com/George-Madeley/leaflet-vector-offline.git",
+  "scripts": {
+    "build": "rm -rf lib && npx tsc",
+    "format": "eslint --fix src && prettier -w \"./src/**/*.ts\"",
+    "lint": "eslint && prettier --check \"./(src|test)/**/*.ts\"",
+    "lint:fix": "eslint --fix src tes",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "types": "lib/index.d.ts",
+  "version": "1.0.5"
 }
