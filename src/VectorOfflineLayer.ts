@@ -1,7 +1,12 @@
 // biome-ignore lint: leaflet 1.x
 declare const L: any;
 
-import { KeyedHtmlCanvasElement, VectorLayerOptions } from "./types";
+import {
+  KeyedHtmlCanvasElement,
+  TileResponseFulfilled,
+  TileResponseRejected,
+  VectorLayerOptions,
+} from "./types";
 import { getTileImageSource, reflect, timer } from "./utils";
 import { themes } from "./themes";
 
@@ -23,6 +28,9 @@ export class VectorOfflineLayer extends L.TileLayer {
         '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>';
     super(url, options);
 
+    // This should be set within `TileLayer.initialize()` but for some reason,
+    // it only sets the variable locally. Therefore, we reset this._url here.
+    this._url = url;
     this._options = options;
 
     if (options.theme) {
@@ -160,17 +168,30 @@ export class VectorOfflineLayer extends L.TileLayer {
       const promise = v.getDisplayTile(coords);
       promises.push({ key: k, promise: promise });
     }
+
     const tileResponses = await Promise.all(
-      promises.map((o) => {
-        return o.promise.then(
-          (v: protomapsLeaflet.PreparedTile[]) => {
-            return { status: "fulfilled", value: v, key: o.key };
-          },
-          (error: Error) => {
-            return { status: "rejected", reason: error, key: o.key };
-          }
-        );
-      })
+      promises.map(
+        (o): Promise<TileResponseFulfilled | TileResponseRejected> => {
+          return o.promise.then(
+            (v: protomapsLeaflet.PreparedTile) => {
+              const response: TileResponseFulfilled = {
+                status: "fulfilled",
+                value: v,
+                key: o.key,
+              };
+              return response;
+            },
+            (error: Error) => {
+              const response: TileResponseRejected = {
+                status: "rejected",
+                reason: error,
+                key: o.key,
+              };
+              return response;
+            }
+          );
+        }
+      )
     );
 
     const preparedTilemap = new Map<string, protomapsLeaflet.PreparedTile[]>();

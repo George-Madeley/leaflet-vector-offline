@@ -8,6 +8,20 @@ export interface Status {
   reason: Error;
 }
 
+export interface TileResponseFulfilled {
+  status: "fulfilled";
+  value: protomapsLeaflet.PreparedTile;
+  key: string;
+}
+
+export interface TileResponseRejected {
+  status: "rejected";
+  reason: Error;
+  key: string;
+}
+
+export type TileResponse = TileResponseFulfilled | TileResponseRejected;
+
 export type DoneCallback = (error?: Error, tile?: HTMLElement) => void;
 
 export type KeyedHtmlCanvasElement = HTMLCanvasElement & { key: string };
