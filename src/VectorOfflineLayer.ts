@@ -131,6 +131,7 @@ export class VectorOfflineLayer extends L.GridLayer {
         }),
         url: getTileUrl(this._url, {
           ...data,
+          // @ts-ignore: Undefined
           s: this._getSubdomain(tilePoint),
         }),
         z: zoom,
@@ -363,6 +364,7 @@ export class VectorOfflineLayer extends L.GridLayer {
     return getTileUrl(this._url, {
       ...coords,
       ...this.options,
+      // @ts-ignore: Possibly undefined
       s: this.options.subdomains["0"],
     });
   }
@@ -372,7 +374,8 @@ export function vectorOfflineLayer(options: LeafletLayerOptions) {
   return new VectorOfflineLayer(options);
 }
 
+/**  @ts-ignore */
 if (window.L) {
-  // @ts-expect-error: TODO find reason ts-expect-error
+  /**  @ts-ignore */
   window.L.tileLayer.offline = vectorOfflineLayer;
 }
