@@ -1,13 +1,8 @@
 // biome-ignore lint: leaflet 1.x
 declare const L: any;
 
-import {
-  Bounds,
-  Coords,
-  DoneCallback,
-} from "leaflet";
+import { Bounds, Coords, DoneCallback, Point } from "leaflet";
 import { KeyedHtmlCanvasElement, LeafletLayerOptions } from "./types";
-import { themes } from "protomaps-leaflet/src/default_style/themes";
 import {
   Labelers,
   labelRules,
@@ -18,11 +13,9 @@ import {
   sourcesToViews,
 } from "protomaps-leaflet";
 import { getTileImageSource, reflect, timer } from "./utils";
-import {
-  getTilePoints,
-  getTileUrl,
-  TileInfo,
-} from "leaflet.offline/dist/types/src/TileManager";
+
+import { getTilePoints, getTileUrl, TileInfo } from "leaflet.offline";
+import { themes } from "./themes";
 
 export class VectorOfflineLayer extends L.GridLayer {
   _url!: string;
@@ -104,8 +97,8 @@ export class VectorOfflineLayer extends L.GridLayer {
     }
 
     tile.lang = this.isLoading;
-    tile.alt = '';
-    tile.setAttribute('role', 'presentation');
+    tile.alt = "";
+    tile.setAttribute("role", "presentation");
 
     const storageKey: string = this._getStorageKey(coords);
     const onlineKey: string = this._tileCoordsToKey(coords);
@@ -118,7 +111,7 @@ export class VectorOfflineLayer extends L.GridLayer {
     // TODO: Find a way to use this method with canvas.
     getTileImageSource(
       this._getStorageKey(coords),
-      this.getTileUrl(coords),
+      this.getTileUrl(coords)
     ).then((value: [string, boolean]) => {
       const [url, fromOnline]: [string, boolean] = value;
       let key: string;
@@ -148,9 +141,8 @@ export class VectorOfflineLayer extends L.GridLayer {
 
   public getTileUrls(bounds: Bounds, zoom: number): TileInfo[] {
     const tiles: TileInfo[] = [];
-    const tilePoints = getTilePoints(bounds, this.getTileSize());
-    for (let index = 0; index < tilePoints.length; index += 1) {
-      const tilePoint = tilePoints[index];
+    const tilePoints: Point[] = getTilePoints(bounds, this.getTileSize());
+    tilePoints.forEach((tilePoint: Point) => {
       const data = {
         ...this.options,
         x: tilePoint.x,
@@ -164,7 +156,6 @@ export class VectorOfflineLayer extends L.GridLayer {
         }),
         url: getTileUrl(this._url, {
           ...data,
-          // @ts-ignore: Undefined
           s: this._getSubdomain(tilePoint),
         }),
         z: zoom,
@@ -173,7 +164,7 @@ export class VectorOfflineLayer extends L.GridLayer {
         urlTemplate: this._url,
         createdAt: Date.now(),
       });
-    }
+    });
     return tiles;
   }
 
@@ -182,7 +173,7 @@ export class VectorOfflineLayer extends L.GridLayer {
     element: KeyedHtmlCanvasElement,
     key: string,
     url: string,
-    done = () => { }
+    done = () => {}
   ) {
     this.views = sourcesToViews({ ...this._options, url });
 
@@ -343,7 +334,12 @@ export class VectorOfflineLayer extends L.GridLayer {
     for (const unwrappedK in this._tiles) {
       const wrappedCoord = this._wrapCoords(this._keyToTileCoords(unwrappedK));
       if (key === this._tileCoordsToKey(wrappedCoord)) {
-        this.renderTile(wrappedCoord, this._tiles[unwrappedK].el, key, this._url);
+        this.renderTile(
+          wrappedCoord,
+          this._tiles[unwrappedK].el,
+          key,
+          this._url
+        );
       }
     }
   }
@@ -389,7 +385,6 @@ export class VectorOfflineLayer extends L.GridLayer {
     return getTileUrl(this._url, {
       ...coords,
       ...this.options,
-      // @ts-ignore: Possibly undefined
       s: this.options.subdomains["0"],
     });
   }
@@ -399,8 +394,7 @@ export function vectorOfflineLayer(options: LeafletLayerOptions) {
   return new VectorOfflineLayer(options);
 }
 
-/**  @ts-ignore */
 if (window.L) {
-  /**  @ts-ignore */
-  window.L.tileLayer.offline = tileLayerOffline;
+  // @ts-expect-error: TODO find reason ts-expect-error
+  window.L.tileLayer.offline = vectorOfflineLayer;
 }
