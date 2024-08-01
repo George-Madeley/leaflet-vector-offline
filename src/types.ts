@@ -1,6 +1,6 @@
-import { GridLayerOptions, LatLngBoundsExpression } from "leaflet";
 import { PMTiles } from "pmtiles";
-import { LabelRule, PaintRule, SourceOptions } from "protomaps-leaflet";
+import { GridLayerOptions, LatLngBoundsExpression } from "leaflet";
+import * as protomapsLeaflet from "protomaps-leaflet";
 
 export interface Status {
   status: string;
@@ -20,12 +20,12 @@ export interface LeafletLayerOptions extends GridLayerOptions {
   tileDelay?: number;
   language?: string[];
   noWrap?: boolean;
-  paintRules?: PaintRule[];
-  labelRules?: LabelRule[];
+  paintRules?: protomapsLeaflet.PaintRule[];
+  labelRules?: protomapsLeaflet.LabelRule[];
   tasks?: Promise<Status>[];
   maxDataZoom?: number;
   url?: PMTiles | string;
-  sources?: Record<string, SourceOptions>;
+  sources?: Record<string, protomapsLeaflet.SourceOptions>;
   theme?: string;
   backgroundColor?: string;
 }

@@ -1,21 +1,13 @@
 // biome-ignore lint: leaflet 1.x
 declare const L: any;
 
-import { Bounds, Coords, DoneCallback, Point } from "leaflet";
 import { KeyedHtmlCanvasElement, LeafletLayerOptions } from "./types";
-import {
-  Labelers,
-  labelRules,
-  paint,
-  paintRules,
-  PickedFeature,
-  PreparedTile,
-  sourcesToViews,
-} from "protomaps-leaflet";
 import { getTileImageSource, reflect, timer } from "./utils";
-
-import { getTilePoints, getTileUrl, TileInfo } from "leaflet.offline";
 import { themes } from "./themes";
+
+import { Bounds, Coords, DoneCallback, Point } from "leaflet";
+import { getTilePoints, getTileUrl, TileInfo } from "leaflet.offline";
+import * as protomapsLeaflet from "protomaps-leaflet";
 
 export class VectorOfflineLayer extends L.GridLayer {
   _url!: string;
@@ -35,8 +27,8 @@ export class VectorOfflineLayer extends L.GridLayer {
 
     if (options.theme) {
       const theme = themes[options.theme];
-      this.paintRules = paintRules(theme);
-      this.labelRules = labelRules(theme);
+      this.paintRules = protomapsLeaflet.paintRules(theme);
+      this.labelRules = protomapsLeaflet.labelRules(theme);
       this.backgroundColor = theme.background;
     } else {
       this.paintRules = options.paintRules || [];
@@ -47,7 +39,7 @@ export class VectorOfflineLayer extends L.GridLayer {
     this.lastRequestedZ = undefined;
     this.tasks = options.tasks || [];
 
-    this.views = sourcesToViews(options);
+    this.views = protomapsLeaflet.sourcesToViews(options);
 
     this.debug = options.debug;
     const scratch = document.createElement("canvas").getContext("2d");
@@ -57,7 +49,7 @@ export class VectorOfflineLayer extends L.GridLayer {
         this.rerenderTile(t);
       }
     };
-    this.labelers = new Labelers(
+    this.labelers = new protomapsLeaflet.Labelers(
       this.scratch,
       this.labelRules,
       16,
@@ -69,7 +61,7 @@ export class VectorOfflineLayer extends L.GridLayer {
   }
 
   public clearLayout() {
-    this.labelers = new Labelers(
+    this.labelers = new protomapsLeaflet.Labelers(
       this.scratch,
       this.labelRules,
       16,
@@ -175,7 +167,7 @@ export class VectorOfflineLayer extends L.GridLayer {
     url: string,
     done = () => {}
   ) {
-    this.views = sourcesToViews({ ...this._options, url });
+    this.views = protomapsLeaflet.sourcesToViews({ ...this._options, url });
 
     this.lastRequestedZ = coords.z;
 
@@ -187,7 +179,7 @@ export class VectorOfflineLayer extends L.GridLayer {
     const tileResponses = await Promise.all(
       promises.map((o) => {
         return o.promise.then(
-          (v: PreparedTile[]) => {
+          (v: protomapsLeaflet.PreparedTile[]) => {
             return { status: "fulfilled", value: v, key: o.key };
           },
           (error: Error) => {
@@ -197,7 +189,7 @@ export class VectorOfflineLayer extends L.GridLayer {
       })
     );
 
-    const preparedTilemap = new Map<string, PreparedTile[]>();
+    const preparedTilemap = new Map<string, protomapsLeaflet.PreparedTile[]>();
     for (const tileResponse of tileResponses) {
       if (tileResponse.status === "fulfilled") {
         preparedTilemap.set(tileResponse.key, [tileResponse.value]);
@@ -268,7 +260,7 @@ export class VectorOfflineLayer extends L.GridLayer {
 
     const paintRules = this.paintRules;
 
-    paintingTime = paint(
+    paintingTime = protomapsLeaflet.paint(
       ctx,
       coords.z,
       preparedTilemap,
@@ -353,8 +345,11 @@ export class VectorOfflineLayer extends L.GridLayer {
     lng: number,
     lat: number,
     brushSize = 16
-  ): Map<string, PickedFeature[]> {
-    const featuresBySourceName = new Map<string, PickedFeature[]>();
+  ): Map<string, protomapsLeaflet.PickedFeature[]> {
+    const featuresBySourceName = new Map<
+      string,
+      protomapsLeaflet.PickedFeature[]
+    >();
     for (const [sourceName, view] of this.views) {
       featuresBySourceName.set(
         sourceName,
