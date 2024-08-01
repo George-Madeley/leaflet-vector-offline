@@ -1,5 +1,6 @@
 {
   "author": "George Madeley",
+  "bin": "lib/index.js",
   "dependencies": {
     "leaflet": "^1.9.4",
     "leaflet.offline": "^3.1.0",
@@ -16,8 +17,13 @@
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.0.0"
   },
+  "files": [
+    "lib",
+    "package.json"
+  ],
   "license": "ISC",
   "main": "lib/index.js",
+  "module": "lib/index.js",
   "name": "leaflet-vector-offline",
   "repository": "https://github.com/George-Madeley/leaflet-vector-offline.git",
   "scripts": {
@@ -27,7 +33,6 @@
     "lint:fix": "eslint --fix src tes",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "type": "module",
   "types": "lib/index.d.ts",
-  "version": "1.0.7"
+  "version": "1.0.8"
 }
