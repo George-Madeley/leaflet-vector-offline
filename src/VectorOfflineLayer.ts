@@ -3,6 +3,7 @@ declare const L: any;
 
 import {
   KeyedHtmlCanvasElement,
+  Status,
   TileResponseFulfilled,
   TileResponseRejected,
   VectorLayerOptions,
@@ -16,6 +17,21 @@ import * as protomapsLeaflet from "protomaps-leaflet";
 
 export class VectorOfflineLayer extends L.TileLayer {
   _url!: string;
+
+  views: Map<string, protomapsLeaflet.View>;
+
+  lastRequestedZ: number | undefined;
+  tasks: Promise<Status>[] | undefined;
+  debug: string | undefined;
+  scratch: CanvasRenderingContext2D | null;
+  labelers: protomapsLeaflet.Labelers;
+  paintRules: protomapsLeaflet.PaintRule[];
+  labelRules: protomapsLeaflet.LabelRule[];
+  backgroundColor: string | undefined;
+  tileSize: number;
+  tileDelay: number;
+  lang: string | undefined;
+  sourcePriority: "online" | "offline" | "both";
 
   constructor(url: string, options: VectorLayerOptions = {}) {
     if (options.noWrap && !options.bounds)
@@ -32,6 +48,8 @@ export class VectorOfflineLayer extends L.TileLayer {
     // it only sets the variable locally. Therefore, we reset this._url here.
     this._url = url;
     this._options = options;
+
+    this.sourcePriority = options.priority || "both";
 
     if (options.theme) {
       const theme = themes[options.theme];
@@ -58,7 +76,7 @@ export class VectorOfflineLayer extends L.TileLayer {
       }
     };
     this.labelers = new protomapsLeaflet.Labelers(
-      this.scratch,
+      this.scratch!,
       this.labelRules,
       16,
       this.onTilesInvalidated
@@ -70,7 +88,7 @@ export class VectorOfflineLayer extends L.TileLayer {
 
   public clearLayout() {
     this.labelers = new protomapsLeaflet.Labelers(
-      this.scratch,
+      this.scratch!,
       this.labelRules,
       16,
       this.onTilesInvalidated
@@ -80,46 +98,42 @@ export class VectorOfflineLayer extends L.TileLayer {
   public createTile(coords: Coords, done: DoneCallback): HTMLCanvasElement {
     const tile = L.DomUtil.create("canvas", "leaflet-tile");
 
-    tile.lang = this.isLoading;
+    tile.lang = this.lang;
 
-    const storageKey: string = this._getStorageKey(coords);
+    const offlineKey: string = this._getStorageKey(coords);
     const onlineKey: string = this._tileCoordsToKey(coords);
 
-    // This method takes the tile key and the online url of the tile and returns
-    // the url of the tile image source from the cache if it exists, otherwise
-    // it fetches it from the online url. This url is then set as the src of the
-    // tile element. i.e., <img src={url} />. But as we are using canvas instead
-    // of img, we cannot use this.
-    // TODO: Find a way to use this method with canvas.
-    getTileImageSource(
-      this._getStorageKey(coords),
-      this.getTileUrl(coords)
-    ).then((value: [string, boolean]) => {
-      const [url, fromOnline]: [string, boolean] = value;
-      let key: string;
-      if (fromOnline) {
-        key = onlineKey;
-      } else {
-        key = storageKey;
+    getTileImageSource(this._getStorageKey(coords), this._url).then(
+      (value: [string, boolean]) => {
+        const [url, fromOnline]: [string, boolean] = value;
+        let key: string | undefined;
+        if (
+          fromOnline &&
+          (this.sourcePriority === "both" || this.sourcePriority === "online")
+        ) {
+          key = onlineKey;
+        } else if (
+          !fromOnline &&
+          (this.sourcePriority === "both" || this.sourcePriority === "offline")
+        ) {
+          key = offlineKey;
+        }
+        if (key) {
+          tile.key = key;
+          this.renderTile(coords, tile, key, url, () => {
+            done(undefined, tile);
+          });
+        }
       }
-      tile.key = key;
-      this.renderTile(coords, tile, key, url, () => {
-        done(undefined, tile);
-      });
-    });
+    );
+
+    // tile.key = onlineKey;
+
+    // this.renderTile(coords, tile, onlineKey, this._url, () => {
+    //   done(undefined, tile);
+    // });
 
     return tile;
-    //   const element = L.DomUtil.create("canvas", "leaflet-tile");
-    //   element.lang = this.lang;
-
-    //   const key = this._tileCoordsToKey(coords);
-    //   element.key = key;
-
-    //   this.renderTile(coords, element, key, () => {
-    //     showTile(undefined, element);
-    //   });
-
-    //   return element;
   }
 
   public getTileUrls(bounds: Bounds, zoom: number): TileInfo[] {
@@ -127,19 +141,19 @@ export class VectorOfflineLayer extends L.TileLayer {
     const tilePoints: Point[] = getTilePoints(bounds, this.getTileSize());
     tilePoints.forEach((tilePoint: Point) => {
       const data = {
-        ...this.options,
+        ...this._options,
         x: tilePoint.x,
         y: tilePoint.y,
-        z: zoom + (this.options.zoomOffset || 0),
+        z: zoom + (this._options.zoomOffset || 0),
       };
       tiles.push({
         key: getTileUrl(this._url, {
           ...data,
-          s: this.options.subdomains?.[0],
+          s: this._options.subdomains?.[0],
         }),
         url: getTileUrl(this._url, {
           ...data,
-          // @ts-ignore: Undefined
+          // // @ts-ignore: Undefined
           s: this._getSubdomain(tilePoint),
         }),
         z: zoom,
@@ -159,58 +173,72 @@ export class VectorOfflineLayer extends L.TileLayer {
     url: string,
     done = () => {}
   ) {
-    this.views = protomapsLeaflet.sourcesToViews({ ...this._options, url });
+    // this.views = protomapsLeaflet.sourcesToViews({ ...this._options, url });
 
     this.lastRequestedZ = coords.z;
 
-    const promises = [];
+    const promises: {
+      key: string;
+      promise: Promise<protomapsLeaflet.PreparedTile>;
+    }[] = [];
     for (const [k, v] of this.views) {
-      const promise = v.getDisplayTile(coords);
+      const promise: Promise<protomapsLeaflet.PreparedTile> =
+        v.getDisplayTile(coords);
       promises.push({ key: k, promise: promise });
     }
 
-    const tileResponses = await Promise.all(
-      promises.map(
-        (o): Promise<TileResponseFulfilled | TileResponseRejected> => {
-          return o.promise.then(
-            (v: protomapsLeaflet.PreparedTile) => {
-              const response: TileResponseFulfilled = {
-                status: "fulfilled",
-                value: v,
-                key: o.key,
-              };
-              return response;
-            },
-            (error: Error) => {
-              const response: TileResponseRejected = {
-                status: "rejected",
-                reason: error,
-                key: o.key,
-              };
-              return response;
-            }
-          );
-        }
-      )
-    );
+    const tileResponses: (TileResponseFulfilled | TileResponseRejected)[] =
+      await Promise.all(
+        promises.map(
+          (object: {
+            key: string;
+            promise: Promise<protomapsLeaflet.PreparedTile>;
+          }): Promise<TileResponseFulfilled | TileResponseRejected> => {
+            return object.promise.then(
+              (v: protomapsLeaflet.PreparedTile) => {
+                const response: TileResponseFulfilled = {
+                  status: "fulfilled",
+                  value: v,
+                  key: object.key,
+                };
+                return response;
+              },
+              (error: Error) => {
+                const response: TileResponseRejected = {
+                  status: "rejected",
+                  reason: error,
+                  key: object.key,
+                };
+                return response;
+              }
+            );
+          }
+        )
+      );
 
     const preparedTilemap = new Map<string, protomapsLeaflet.PreparedTile[]>();
-    for (const tileResponse of tileResponses) {
-      if (tileResponse.status === "fulfilled") {
-        preparedTilemap.set(tileResponse.key, [tileResponse.value]);
-      } else {
-        if (tileResponse.reason.name === "AbortError") {
-          // do nothing
+    tileResponses.forEach(
+      (tileResponse: TileResponseFulfilled | TileResponseRejected) => {
+        if (tileResponse.status === "fulfilled") {
+          preparedTilemap.set(tileResponse.key, [tileResponse.value]);
+        } else if (tileResponse.status === "rejected") {
+          if (tileResponse.reason.name !== "AbortError") {
+            console.error(
+              `ERROR: (${tileResponse.reason.name}) ${tileResponse.reason}`
+            );
+          }
         } else {
-          console.error(tileResponse.reason);
+          console.error(
+            'TYPE ERROR: `tileResponse.status` has valued that is not "fulfilled" or "rejected"'
+          );
         }
       }
-    }
+    );
 
     if (element.key !== key) return;
     if (this.lastRequestedZ !== coords.z) return;
 
-    await Promise.all(this.tasks.map(reflect));
+    await Promise.all(this.tasks!.map(reflect));
 
     if (element.key !== key) return;
     if (this.lastRequestedZ !== coords.z) return;
@@ -269,7 +297,7 @@ export class VectorOfflineLayer extends L.TileLayer {
       ctx,
       coords.z,
       preparedTilemap,
-      this.xray ? null : labelData,
+      this.xray ? null : labelData!,
       paintRules,
       bbox,
       origin,
@@ -384,9 +412,9 @@ export class VectorOfflineLayer extends L.TileLayer {
   private _getStorageKey(coords: Coords) {
     return getTileUrl(this._url, {
       ...coords,
-      ...this.options,
-      // @ts-ignore: Possibly undefined
-      s: this.options.subdomains["0"],
+      ...this._options,
+      // // @ts-ignore: Possibly undefined
+      s: this._options.subdomains["0"],
     });
   }
 }
@@ -395,8 +423,8 @@ export function vectorOfflineLayer(url: string, options: VectorLayerOptions) {
   return new VectorOfflineLayer(url, options);
 }
 
-/**  @ts-ignore */
+// // @ts-ignore
 if (window.L) {
-  /**  @ts-ignore */
+  // @ts-expect-error type `offline` does not exist on type `tileLayer`.
   window.L.tileLayer.offline = vectorOfflineLayer;
 }

@@ -42,4 +42,5 @@ export interface VectorLayerOptions extends TileLayerOptions {
   sources?: Record<string, protomapsLeaflet.SourceOptions>;
   theme?: string;
   backgroundColor?: string;
+  priority?: "online" | "offline" | "both";
 }
