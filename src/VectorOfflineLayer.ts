@@ -16,22 +16,21 @@ import { getTilePoints, getTileUrl, TileInfo } from "leaflet.offline";
 import * as protomapsLeaflet from "protomaps-leaflet";
 
 export class VectorOfflineLayer extends L.TileLayer {
-  _url!: string;
-
+  backgroundColor: string | undefined;
+  debug: string | undefined;
+  labelers: protomapsLeaflet.Labelers;
+  labelRules: protomapsLeaflet.LabelRule[];
+  lang: string | undefined;
+  lastRequestedZ: number | undefined;
+  paintRules: protomapsLeaflet.PaintRule[];
+  scratch: CanvasRenderingContext2D | null;
+  sourcePriority: "online" | "offline" | "both";
+  tasks: Promise<Status>[] | undefined;
+  tileDelay: number;
+  tileSize: number;
   views: Map<string, protomapsLeaflet.View>;
 
-  lastRequestedZ: number | undefined;
-  tasks: Promise<Status>[] | undefined;
-  debug: string | undefined;
-  scratch: CanvasRenderingContext2D | null;
-  labelers: protomapsLeaflet.Labelers;
-  paintRules: protomapsLeaflet.PaintRule[];
-  labelRules: protomapsLeaflet.LabelRule[];
-  backgroundColor: string | undefined;
-  tileSize: number;
-  tileDelay: number;
-  lang: string | undefined;
-  sourcePriority: "online" | "offline" | "both";
+  _url!: string;
 
   constructor(url: string, options: VectorLayerOptions = {}) {
     if (options.noWrap && !options.bounds)
@@ -86,6 +85,10 @@ export class VectorOfflineLayer extends L.TileLayer {
     this.lang = options.lang;
   }
 
+  /**
+   * Clear the layout of the labels. This is useful when the map is panned or
+   * zoomed, and the labels need to be re-laid out.
+   */
   public clearLayout() {
     this.labelers = new protomapsLeaflet.Labelers(
       this.scratch!,
@@ -95,6 +98,15 @@ export class VectorOfflineLayer extends L.TileLayer {
     );
   }
 
+  /**
+   * Create a tile element for the given coordinates and callback when it's
+   * ready.
+   *
+   * @param coords Coordinates of the tile
+   * @param done Callback function
+   *
+   * @returns HTMLCanvasElement of the vector tile.
+   */
   public createTile(coords: Coords, done: DoneCallback): HTMLCanvasElement {
     const tile = L.DomUtil.create("canvas", "leaflet-tile");
 
@@ -127,15 +139,17 @@ export class VectorOfflineLayer extends L.TileLayer {
       }
     );
 
-    // tile.key = onlineKey;
-
-    // this.renderTile(coords, tile, onlineKey, this._url, () => {
-    //   done(undefined, tile);
-    // });
-
     return tile;
   }
 
+  /**
+   * Get the tile url for the given bounds and zoom level.
+   *
+   * @param bounds Tile bounds.
+   * @param zoom Zoom level.
+   *
+   * @returns Array of TileInfo objects.
+   */
   public getTileUrls(bounds: Bounds, zoom: number): TileInfo[] {
     const tiles: TileInfo[] = [];
     const tilePoints: Point[] = getTilePoints(bounds, this.getTileSize());
@@ -166,13 +180,24 @@ export class VectorOfflineLayer extends L.TileLayer {
     return tiles;
   }
 
+  /**
+   * Render the tile for the given coordinates using vector data.
+   *
+   * @param coords The coordinates of the tile.
+   * @param element The HTMLCanvasElement of the tile.
+   * @param key The key of the tile to render. This is dependent on the source
+   * of the tile data. I.e., if the tile data is from the offline source or the
+   * online source.
+   * @param url The URL of the tile data.
+   * @param done callback function to be called when the tile is rendered.
+   */
   public async renderTile(
     coords: Coords,
     element: KeyedHtmlCanvasElement,
     key: string,
     url: string,
     done = () => {}
-  ) {
+  ): Promise<void> {
     // this.views = protomapsLeaflet.sourcesToViews({ ...this._options, url });
 
     this.lastRequestedZ = coords.z;
@@ -250,7 +275,7 @@ export class VectorOfflineLayer extends L.TileLayer {
 
     const labelData = this.labelers.getIndex(coords.z);
 
-    if (!this._map) return; // the layer has been removed from the map
+    if (!this._map) return;
 
     const center = this._map.getCenter().wrap();
     const pixelBounds = this._getTiledPixelBounds(center);
@@ -347,6 +372,9 @@ export class VectorOfflineLayer extends L.TileLayer {
     done();
   }
 
+  /**
+   * Rerender all the tiles.
+   */
   public rerenderTiles() {
     for (const unwrappedK in this._tiles) {
       const wrappedCoord = this._wrapCoords(this._keyToTileCoords(unwrappedK));
@@ -355,6 +383,11 @@ export class VectorOfflineLayer extends L.TileLayer {
     }
   }
 
+  /**
+   * Rerender the tile with the given key.
+   *
+   * @param key The key of the tile to rerender.
+   */
   public rerenderTile(key: string) {
     for (const unwrappedK in this._tiles) {
       const wrappedCoord = this._wrapCoords(this._keyToTileCoords(unwrappedK));
@@ -369,11 +402,20 @@ export class VectorOfflineLayer extends L.TileLayer {
     }
   }
 
-  // a primitive way to check the features at a certain point.
-  // it does not support hover states, cursor changes, or changing the style of the selected feature,
-  // so is only appropriate for debuggging or very basic use cases.
-  // those features are outside of the scope of this library:
-  // for fully pickable, interactive features, use MapLibre GL JS instead.
+  /**
+   * Query the features at the given point.
+   *
+   * A primitive way to check the features at a certain point. It does not
+   * support hover states, cursor changes, or changing the style of the selected
+   * feature, so is only appropriate for debuggging or very basic use cases.
+   * Those features are outside of the scope of this library: for fully
+   * pickable, interactive features, use MapLibre GL JS instead.
+   *
+   * @param lng longitude of the point to query
+   * @param lat latitude of the point to query
+   * @param brushSize brush size to query the features
+   * @returns Map of source name to the features at the given point.
+   */
   public queryTileFeaturesDebug(
     lng: number,
     lat: number,
@@ -392,7 +434,12 @@ export class VectorOfflineLayer extends L.TileLayer {
     return featuresBySourceName;
   }
 
-  public _removeTile(key: string) {
+  /**
+   * Remove the tile with the given key.
+   *
+   * @param key key of the tile to remove.
+   */
+  public _removeTile(key: string): void {
     const tile = this._tiles[key];
     if (!tile) {
       return;
@@ -409,7 +456,14 @@ export class VectorOfflineLayer extends L.TileLayer {
     });
   }
 
-  private _getStorageKey(coords: Coords) {
+  /**
+   * Get the subdomain for the given point.
+   *
+   * @param coords The coordinates of the tile to get the subdomain.
+   *
+   * @returns The subdomain for the given point.
+   */
+  private _getStorageKey(coords: Coords): string {
     return getTileUrl(this._url, {
       ...coords,
       ...this._options,
@@ -419,6 +473,14 @@ export class VectorOfflineLayer extends L.TileLayer {
   }
 }
 
+/**
+ * Create a new VectorOfflineLayer object.
+ *
+ * @param url The URL of the vector tile.
+ * @param options The options for the vector map.
+ *
+ * @returns A new VectorOfflineLayer object.
+ */
 export function vectorOfflineLayer(url: string, options: VectorLayerOptions) {
   return new VectorOfflineLayer(url, options);
 }
