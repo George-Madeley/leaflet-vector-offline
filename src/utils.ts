@@ -1,12 +1,14 @@
 import { getBlobByKey, hasTile } from "leaflet.offline";
-import { Status } from "./types";
+import { Status, StatusFulfilled, StatusRejected } from "./types";
 
-export const reflect = (promise: Promise<Status>) => {
+export const reflect = (
+  promise: Promise<Status>
+): Promise<StatusFulfilled | StatusRejected> => {
   return promise.then(
-    (v) => {
-      return { status: "fulfilled", value: v };
+    (status: Status) => {
+      return { status: "fulfilled", value: status.value };
     },
-    (error) => {
+    (error: Error) => {
       return { status: "rejected", reason: error };
     }
   );

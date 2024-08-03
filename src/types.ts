@@ -8,6 +8,16 @@ export interface Status {
   reason: Error;
 }
 
+export interface StatusFulfilled {
+  status: "fulfilled";
+  value: unknown;
+}
+
+export interface StatusRejected {
+  status: "rejected";
+  reason: Error;
+}
+
 export interface TileResponseFulfilled {
   status: "fulfilled";
   value: protomapsLeaflet.PreparedTile;
