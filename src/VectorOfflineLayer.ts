@@ -41,12 +41,12 @@ export class VectorOfflineLayer extends L.TileLayer {
     if (options.attribution == null)
       options.attribution =
         '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>';
+    options = { ...options, url: url };
     super(url, options);
 
     // This should be set within `TileLayer.initialize()` but for some reason,
     // it only sets the variable locally. Therefore, we reset this._url here.
     this._url = url;
-    this._options = options;
 
     this.sourcePriority = options.priority || "both";
 
