@@ -55,4 +55,5 @@ export interface VectorLayerOptions extends TileLayerOptions {
   theme?: ThemeName;
   tileDelay?: number;
   url?: PMTiles | string;
+  verbose?: boolean;
 }

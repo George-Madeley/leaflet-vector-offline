@@ -133,6 +133,13 @@ export class VectorOfflineLayer extends L.TileLayer {
       (value: [string, boolean]) => {
         const [url, fromOnline]: [string, boolean] = value;
         let key: string | undefined;
+
+        if (this.options.verbose) {
+          console.log(
+            `Coords: ${coords},\nOffline key: ${offlineKey},\nOnline key: ${onlineKey},\nfromOnline: ${fromOnline},\nsourcePriority: ${this.sourcePriority}`
+          );
+        }
+
         if (
           fromOnline &&
           (this.sourcePriority === "both" || this.sourcePriority === "online")
@@ -152,6 +159,10 @@ export class VectorOfflineLayer extends L.TileLayer {
         }
       }
     );
+
+    if (this.options.verbose) {
+      tile.style.border = "1px solid red";
+    }
 
     return tile;
   }
@@ -212,6 +223,12 @@ export class VectorOfflineLayer extends L.TileLayer {
     url: string,
     done = () => {}
   ): Promise<void> {
+    if (this.options.verbose) {
+      console.log(
+        `Rendering Element key: ${element.key},\nkey: ${key},\nlastRequestedZ: ${this.lastRequestedZ},\ncoords.z: ${coords.z}`
+      );
+    }
+
     this.views = protomapsLeaflet.sourcesToViews({ ...this.options, url });
 
     this.lastRequestedZ = coords.z;
@@ -485,6 +502,12 @@ export class VectorOfflineLayer extends L.TileLayer {
     key: string,
     coords: Coords
   ): boolean {
+    if (this.options.verbose) {
+      console.log(
+        `Element key: ${element.key},\nkey: ${key},\nlastRequestedZ: ${this.lastRequestedZ},\ncoords.z: ${coords.z}`
+      );
+    }
+
     if (element.key !== key) {
       return false;
     }
