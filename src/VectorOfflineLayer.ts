@@ -212,7 +212,7 @@ export class VectorOfflineLayer extends L.TileLayer {
     url: string,
     done = () => {}
   ): Promise<void> {
-    // this.views = protomapsLeaflet.sourcesToViews({ ...this.options, url });
+    this.views = protomapsLeaflet.sourcesToViews({ ...this.options, url });
 
     this.lastRequestedZ = coords.z;
 
