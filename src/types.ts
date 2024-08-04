@@ -36,21 +36,23 @@ export type DoneCallback = (error?: Error, tile?: HTMLElement) => void;
 
 export type KeyedHtmlCanvasElement = HTMLCanvasElement & { key: string };
 
+export type ThemeName = "light" | "dark" | "white" | "grayscale" | "black";
+
 export interface VectorLayerOptions extends TileLayerOptions {
-  bounds?: LatLngBoundsExpression;
   attribution?: string;
+  backgroundColor?: string;
+  bounds?: LatLngBoundsExpression;
   debug?: string;
+  labelRules?: protomapsLeaflet.LabelRule[];
   lang?: string;
-  tileDelay?: number;
   language?: string[];
+  maxDataZoom?: number;
   noWrap?: boolean;
   paintRules?: protomapsLeaflet.PaintRule[];
-  labelRules?: protomapsLeaflet.LabelRule[];
-  tasks?: Promise<Status>[];
-  maxDataZoom?: number;
-  url?: PMTiles | string;
-  sources?: Record<string, protomapsLeaflet.SourceOptions>;
-  theme?: string;
-  backgroundColor?: string;
   priority?: "online" | "offline" | "both";
+  sources?: Record<string, protomapsLeaflet.SourceOptions>;
+  tasks?: Promise<Status>[];
+  theme?: ThemeName;
+  tileDelay?: number;
+  url?: PMTiles | string;
 }

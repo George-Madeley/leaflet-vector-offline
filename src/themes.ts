@@ -1,3 +1,5 @@
+import { ThemeName } from "./types.ts";
+
 export interface Theme {
   background: string;
   earth: string;
@@ -538,7 +540,7 @@ export const BLACK: Theme = {
   country_label: "#707070",
 };
 
-export const themes: Record<string, Theme> = {
+export const themes: Record<ThemeName, Theme> = {
   light: LIGHT,
   dark: DARK,
   white: WHITE,

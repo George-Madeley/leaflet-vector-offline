@@ -4,12 +4,13 @@ declare const L: any;
 import {
   KeyedHtmlCanvasElement,
   Status,
+  ThemeName,
   TileResponseFulfilled,
   TileResponseRejected,
   VectorLayerOptions,
-} from "./types";
-import { getTileImageSource, reflect, timer } from "./utils";
-import { themes } from "./themes";
+} from "./types.ts";
+import { getTileImageSource, reflect, timer } from "./utils.ts";
+import { Theme, themes } from "./themes.ts";
 
 import { Bounds, Coords, DoneCallback, Point } from "leaflet";
 import { getTilePoints, getTileUrl, TileInfo } from "leaflet.offline";
@@ -23,7 +24,7 @@ export class VectorOfflineLayer extends L.TileLayer {
   lang: string | undefined;
   lastRequestedZ: number | undefined;
   paintRules: protomapsLeaflet.PaintRule[];
-  scratch: CanvasRenderingContext2D | null;
+  scratch: CanvasRenderingContext2D;
   sourcePriority: "online" | "offline" | "both";
   tasks: Promise<Status>[] | undefined;
   tileDelay: number;
@@ -32,7 +33,7 @@ export class VectorOfflineLayer extends L.TileLayer {
 
   _url!: string;
 
-  constructor(url: string, options: VectorLayerOptions = {}) {
+  constructor(url: string, options: VectorLayerOptions) {
     if (options.noWrap && !options.bounds)
       options.bounds = [
         [-90, -180],
@@ -42,6 +43,7 @@ export class VectorOfflineLayer extends L.TileLayer {
       options.attribution =
         '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>';
     options = { ...options, url: url };
+
     super(url, options);
 
     // This should be set within `TileLayer.initialize()` but for some reason,
@@ -51,7 +53,8 @@ export class VectorOfflineLayer extends L.TileLayer {
     this.sourcePriority = options.priority || "both";
 
     if (options.theme) {
-      const theme = themes[options.theme];
+      const themeName: ThemeName = options.theme || "light";
+      const theme: Theme = themes[themeName];
       this.paintRules = protomapsLeaflet.paintRules(theme);
       this.labelRules = protomapsLeaflet.labelRules(theme);
       this.backgroundColor = theme.background;
@@ -67,18 +70,19 @@ export class VectorOfflineLayer extends L.TileLayer {
     this.views = protomapsLeaflet.sourcesToViews(options);
 
     this.debug = options.debug;
-    const scratch = document.createElement("canvas").getContext("2d");
+    const scratch: CanvasRenderingContext2D = document
+      .createElement("canvas")
+      .getContext("2d")!;
     this.scratch = scratch;
-    this.onTilesInvalidated = (tiles: Set<string>) => {
-      for (const t of tiles) {
-        this.rerenderTile(t);
-      }
-    };
     this.labelers = new protomapsLeaflet.Labelers(
-      this.scratch!,
+      this.scratch,
       this.labelRules,
       16,
-      this.onTilesInvalidated
+      (tiles: Set<string>) => {
+        for (const t of tiles) {
+          this.rerenderTile(t);
+        }
+      }
     );
     this.tileSize = 256 * window.devicePixelRatio;
     this.tileDelay = options.tileDelay || 3;
@@ -94,7 +98,11 @@ export class VectorOfflineLayer extends L.TileLayer {
       this.scratch!,
       this.labelRules,
       16,
-      this.onTilesInvalidated
+      (tiles: Set<string>) => {
+        for (const t of tiles) {
+          this.rerenderTile(t);
+        }
+      }
     );
   }
 
@@ -107,10 +115,16 @@ export class VectorOfflineLayer extends L.TileLayer {
    *
    * @returns HTMLCanvasElement of the vector tile.
    */
-  public createTile(coords: Coords, done: DoneCallback): HTMLCanvasElement {
-    const tile = L.DomUtil.create("canvas", "leaflet-tile");
+  public createTile(
+    coords: Coords,
+    done: DoneCallback
+  ): KeyedHtmlCanvasElement {
+    const tile: KeyedHtmlCanvasElement = L.DomUtil.create(
+      "canvas",
+      "leaflet-tile"
+    );
 
-    tile.lang = this.lang;
+    tile.lang = this.lang || "";
 
     const offlineKey: string = this._getStorageKey(coords);
     const onlineKey: string = this._tileCoordsToKey(coords);
@@ -206,12 +220,11 @@ export class VectorOfflineLayer extends L.TileLayer {
       key: string;
       promise: Promise<protomapsLeaflet.PreparedTile>;
     }[] = [];
-    for (const [k, v] of this.views) {
+    for (const [key, view] of this.views) {
       const promise: Promise<protomapsLeaflet.PreparedTile> =
-        v.getDisplayTile(coords);
-      promises.push({ key: k, promise: promise });
+        view.getDisplayTile(coords);
+      promises.push({ key: key, promise: promise });
     }
-
     const tileResponses: (TileResponseFulfilled | TileResponseRejected)[] =
       await Promise.all(
         promises.map(
@@ -240,7 +253,6 @@ export class VectorOfflineLayer extends L.TileLayer {
           }
         )
       );
-
     const preparedTilemap = new Map<string, protomapsLeaflet.PreparedTile[]>();
     tileResponses.forEach(
       (tileResponse: TileResponseFulfilled | TileResponseRejected) => {
@@ -375,7 +387,7 @@ export class VectorOfflineLayer extends L.TileLayer {
   /**
    * Rerender all the tiles.
    */
-  public rerenderTiles() {
+  public rerenderTiles(): void {
     for (const unwrappedK in this._tiles) {
       const wrappedCoord = this._wrapCoords(this._keyToTileCoords(unwrappedK));
       const key = this._tileCoordsToKey(wrappedCoord);
@@ -388,7 +400,7 @@ export class VectorOfflineLayer extends L.TileLayer {
    *
    * @param key The key of the tile to rerender.
    */
-  public rerenderTile(key: string) {
+  public rerenderTile(key: string): void {
     for (const unwrappedK in this._tiles) {
       const wrappedCoord = this._wrapCoords(this._keyToTileCoords(unwrappedK));
       if (key === this._tileCoordsToKey(wrappedCoord)) {
@@ -481,7 +493,10 @@ export class VectorOfflineLayer extends L.TileLayer {
  *
  * @returns A new VectorOfflineLayer object.
  */
-export function vectorOfflineLayer(url: string, options: VectorLayerOptions) {
+export function vectorOfflineLayer(
+  url: string,
+  options: VectorLayerOptions
+): VectorOfflineLayer {
   return new VectorOfflineLayer(url, options);
 }
 

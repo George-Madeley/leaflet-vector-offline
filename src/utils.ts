@@ -1,5 +1,5 @@
 import { getBlobByKey, hasTile } from "leaflet.offline";
-import { Status, StatusFulfilled, StatusRejected } from "./types";
+import { Status, StatusFulfilled, StatusRejected } from "./types.ts";
 
 export const reflect = (
   promise: Promise<Status>
