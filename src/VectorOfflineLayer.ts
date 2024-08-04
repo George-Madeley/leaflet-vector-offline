@@ -181,8 +181,8 @@ export class VectorOfflineLayer extends L.TileLayer {
     tilePoints.forEach((tilePoint: Point) => {
       const data = {
         ...this.options,
-        x: tilePoint.x,
-        y: tilePoint.y,
+        x: Math.floor(tilePoint.x * 2 ** this.options.zoomOffset),
+        y: Math.floor(tilePoint.y * 2 ** this.options.zoomOffset),
         z: zoom + (this.options.zoomOffset || 0),
       };
       tiles.push({
@@ -492,6 +492,9 @@ export class VectorOfflineLayer extends L.TileLayer {
     return getTileUrl(this._url, {
       ...coords,
       ...this.options,
+      x: Math.floor(coords.x * 2 ** this.options.zoomOffset),
+      y: Math.floor(coords.y * 2 ** this.options.zoomOffset),
+      z: coords.z + (this.options.zoomOffset || 0),
       // // @ts-ignore: Possibly undefined
       s: this.options.subdomains["0"],
     });
