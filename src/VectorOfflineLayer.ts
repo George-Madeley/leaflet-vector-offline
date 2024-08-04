@@ -169,15 +169,15 @@ export class VectorOfflineLayer extends L.TileLayer {
     const tilePoints: Point[] = getTilePoints(bounds, this.getTileSize());
     tilePoints.forEach((tilePoint: Point) => {
       const data = {
-        ...this._options,
+        ...this.options,
         x: tilePoint.x,
         y: tilePoint.y,
-        z: zoom + (this._options.zoomOffset || 0),
+        z: zoom + (this.options.zoomOffset || 0),
       };
       tiles.push({
         key: getTileUrl(this._url, {
           ...data,
-          s: this._options.subdomains?.[0],
+          s: this.options.subdomains?.[0],
         }),
         url: getTileUrl(this._url, {
           ...data,
@@ -212,7 +212,7 @@ export class VectorOfflineLayer extends L.TileLayer {
     url: string,
     done = () => {}
   ): Promise<void> {
-    // this.views = protomapsLeaflet.sourcesToViews({ ...this._options, url });
+    // this.views = protomapsLeaflet.sourcesToViews({ ...this.options, url });
 
     this.lastRequestedZ = coords.z;
 
@@ -478,9 +478,9 @@ export class VectorOfflineLayer extends L.TileLayer {
   private _getStorageKey(coords: Coords): string {
     return getTileUrl(this._url, {
       ...coords,
-      ...this._options,
+      ...this.options,
       // // @ts-ignore: Possibly undefined
-      s: this._options.subdomains["0"],
+      s: this.options.subdomains["0"],
     });
   }
 }
