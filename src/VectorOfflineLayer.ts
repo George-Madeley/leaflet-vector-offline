@@ -272,18 +272,15 @@ export class VectorOfflineLayer extends L.TileLayer {
       }
     );
 
-    if (element.key !== key) return;
-    if (this.lastRequestedZ !== coords.z) return;
+    if (!this._validateKey(element, key, coords)) return;
 
     await Promise.all(this.tasks!.map(reflect));
 
-    if (element.key !== key) return;
-    if (this.lastRequestedZ !== coords.z) return;
+    if (!this._validateKey(element, key, coords)) return;
 
     const layoutTime = this.labelers.add(coords.z, preparedTilemap);
 
-    if (element.key !== key) return;
-    if (this.lastRequestedZ !== coords.z) return;
+    if (!this._validateKey(element, key, coords)) return;
 
     const labelData = this.labelers.getIndex(coords.z);
 
@@ -297,8 +294,7 @@ export class VectorOfflineLayer extends L.TileLayer {
 
     await timer(priority);
 
-    if (element.key !== key) return;
-    if (this.lastRequestedZ !== coords.z) return;
+    if (!this._validateKey(element, key, coords)) return;
 
     const buf = 16;
     const bbox = {
@@ -482,6 +478,20 @@ export class VectorOfflineLayer extends L.TileLayer {
       // // @ts-ignore: Possibly undefined
       s: this.options.subdomains["0"],
     });
+  }
+
+  private _validateKey(
+    element: KeyedHtmlCanvasElement,
+    key: string,
+    coords: Coords
+  ): boolean {
+    if (element.key !== key) {
+      return false;
+    }
+    if (this.lastRequestedZ !== coords.z) {
+      return false;
+    }
+    return true;
   }
 }
 
