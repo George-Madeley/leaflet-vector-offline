@@ -1,4 +1,4 @@
-import { ThemeName } from "./types.ts";
+import { ThemeName } from "./types";
 
 export interface Theme {
   background: string;

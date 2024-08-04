@@ -1,10 +1,7 @@
-export {
-  vectorOfflineLayer,
-  VectorOfflineLayer,
-} from "./VectorOfflineLayer.ts";
+export { vectorOfflineLayer, VectorOfflineLayer } from "./VectorOfflineLayer";
 export type {
   Status,
   DoneCallback,
   KeyedHtmlCanvasElement,
   VectorLayerOptions,
-} from "./types.ts";
+} from "./types";

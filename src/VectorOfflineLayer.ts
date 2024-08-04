@@ -8,9 +8,9 @@ import {
   TileResponseFulfilled,
   TileResponseRejected,
   VectorLayerOptions,
-} from "./types.ts";
-import { getTileImageSource, reflect, timer } from "./utils.ts";
-import { Theme, themes } from "./themes.ts";
+} from "./types";
+import { getTileImageSource, reflect, timer } from "./utils";
+import { Theme, themes } from "./themes";
 
 import { Bounds, Coords, DoneCallback, Point } from "leaflet";
 import { getTilePoints, getTileUrl, TileInfo } from "leaflet.offline";
