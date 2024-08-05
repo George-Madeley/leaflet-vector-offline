@@ -38,6 +38,8 @@ export type KeyedHtmlCanvasElement = HTMLCanvasElement & { key: string };
 
 export type ThemeName = "light" | "dark" | "white" | "grayscale" | "black";
 
+export type TileSourcePriority = "online" | "offline" | "both";
+
 export interface VectorLayerOptions extends TileLayerOptions {
   attribution?: string;
   backgroundColor?: string;
@@ -49,7 +51,7 @@ export interface VectorLayerOptions extends TileLayerOptions {
   maxDataZoom?: number;
   noWrap?: boolean;
   paintRules?: protomapsLeaflet.PaintRule[];
-  priority?: "online" | "offline" | "both";
+  priority?: TileSourcePriority;
   sources?: Record<string, protomapsLeaflet.SourceOptions>;
   tasks?: Promise<Status>[];
   theme?: ThemeName;
