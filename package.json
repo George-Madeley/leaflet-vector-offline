@@ -52,6 +52,7 @@
       "prettier --write --ignore-unknown"
     ]
   },
+  "main": "dist/index.js",
   "module": "dist/index.js",
   "name": "leaflet-vector-offline",
   "repository": {
